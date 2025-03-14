@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Editor</title>
+    <style>
+        body {
+            padding: 0 32px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Edit Office documents online</h1>
+
+    <p id="auth-result"></p>
+
+    <h2>Edit your document</h2>
+
+    <div>
+        <label for="edit-url" className="label">edit url for initialization</label>
+        <input id="edit-url" className="input" type="text" size="50" value="https://localhost:7070/details?authDomain=omnidocs" />
+    </div>
+
+    <textarea style="margin: 8px 0;" id="edit-data" rows="10" cols="100" placeholder='{ "Owner": "John Doe", "numbers": 1452341243 }'>{ "Owner": "John Doe", "numbers": 1452341243 }</textarea>
+
+    <p id="upload-form"></p>
+
+    <form id="uploadForm">
+        <label for="fileInput">Upload Office Document:</label>
+        <input type="file" id="file-input" accept=".docx, .pptx, .xlsx" />
+
+        <button id="edit-button" type="button">Open Omnidocs Edit</button>
+    </form>
+
+
+    <p id="edit-result"></p>
+
+    <form>
+        <label for="co-edit-link" className="label">co edit link</label>
+        <input id="co-edit-link" className="input" type="text" size="50" value="co-edit-link" />
+    </form>
+    <p id="download-link-field"></p>
+    <form>
+        <label for="download-link" className="label">download link</label>
+        <input id="download-link" className="input" type="text" size="50" value="download link" />
+    </form>
+    <script src="editflow-connector.js"></script>
+    <script>
+        document.getElementById('edit-button').addEventListener('click', establishConnection);
+
+        async function establishConnection() {
+            await omnidocsEditFlowPostMessageModule.initiateConnection();
+        };
+    </script>
+</body>
+
+</html>
