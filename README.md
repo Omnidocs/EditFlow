@@ -119,38 +119,58 @@ sequenceDiagram
 
 ### Class diagrams
 ```mermaid
-const uploadRequest = {
-    eventType: 'omnidocs-edit-upload-request',
-    correlationId: 'correlationId'
-};
-const uploadResponse = {
-    eventType: 'omnidocs-edit-upload-response',
-    fileBase64: 'base64FileString',
-    fileName: 'name',
-    systemName: 'systemName',
-    additionalData: {},
-    AutoOpenEditorType: 'WOPI/Desktop', /*OPTIONAL*/
-    ShowUIActions: ["WOPI", "Desktop"] /*OPTIONAL*/,
-    correlationId: 'correlationId'
-};
-const editSessionUrlResponse = {
-    eventType: 'omnidocs-edit-session-url-response',
-    editUrl: 'URL-for-co-editing',
-    correlationId: 'correlationId'
-}
-const deliverResponse = {
-    eventType: 'omnidocs-edit-deliver-response',
-    downloadUrl: 'download-url',
-    correlationId: 'correlationId'
-}
-const closeRequest = {
-    eventType: 'omnidocs-edit-close-request',
-    correlationId: 'correlationId'
-};
-const discardEvent = {
-    eventType: 'omnidocs-edit-discard-event',
-    correlationId: 'correlationId'
-}
+classDiagram
+    class UploadRequest {
+        +String eventType = "omnidocs-edit-upload-request"
+        +String correlationId
+    }
+
+    class UploadResponse {
+        +String eventType = "omnidocs-edit-upload-response"
+        +String fileBase64
+        +String fileName
+        +String systemName
+        +Map additionalData
+        +AutoOpenType AutoOpenEditorType = WOPI
+        +List<AutoOpenType> ShowUIActions
+        +String correlationId
+    }
+
+    class AutoOpenType {
+        <<enumeration>>
+        WOPI
+        Desktop
+    }
+
+    class EditSessionUrlResponse {
+        +String eventType = "omnidocs-edit-session-url-response"
+        +String editUrl
+        +String correlationId
+    }
+
+    class DeliverResponse {
+        +String eventType = "omnidocs-edit-deliver-response"
+        +String downloadUrl
+        +String correlationId
+    }
+
+    class CloseRequest {
+        +String eventType = "omnidocs-edit-close-request"
+        +String correlationId
+    }
+
+    class DiscardEvent {
+        +String eventType = "omnidocs-edit-discard-event"
+        +String correlationId
+    }
+
+    UploadRequest --> UploadResponse : Required response
+    UploadResponse --> EditSessionUrlResponse : Required response for online editing
+    DeliverResponse --> CloseRequest : Required response
+    DiscardEvent --> CloseRequest : Required response
+    UploadResponse ..> AutoOpenType : uses
+    UploadResponse ..> ShowUIActions : uses
+
 ```
 
 ## How to use the example application
