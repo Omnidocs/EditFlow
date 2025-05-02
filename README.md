@@ -34,8 +34,8 @@ The integration communicates with the Edit Flow application via the PostMessage 
     * The source system parameter
     * Additional metadata to be displayed to the user
     * ActionType ("Edit" or "View"), which defines if the session is view only or edit mode. If view only, then the document is presented in Microsoft 365 for the web instantly, without edit options available. 
-    * The AutoOpenEditorType parameter, which defines whether the editing session should start automatically (values: 'WOPI/Desktop'). This is optional; if not provided, the editing session will not open automatically.
-    * The ShowUIActions parameter, which specifies the available editing actions for the end-user (values: ["WOPI", "Desktop"]). This is optional; if not provided, all editing actions will be available.
+    * The AutoOpenEditorType parameter, which defines whether the editing session should start automatically (values: 'WOPI/OnPrem'). This is optional; if not provided, the editing session will not open automatically.
+    * The ShowUIActions parameter, which specifies the available editing actions for the end-user (values: ["WOPI", "OnPrem"]). This is optional; if not provided, all editing actions will be available.
 5. <b>Redirection to File Metadata Overview</b>: The first application popup displays the document's metadata and presents four user button actions:
     * `Edit using Microsoft 365 for the web` – Opens a second popup with the WOPI frame for editing.
     * `Edit in {ApplicationType} for the desktop` - Opens an MS Office application for editing. 
@@ -120,37 +120,57 @@ sequenceDiagram
 
 ### Class diagrams
 ```mermaid
-const uploadRequest = {
-    eventType: 'omnidocs-upload-request'
-};
-const uploadResponse = {
-    eventType: 'omnidocs-upload-response',
-    fileBase64: 'base64FileString',
-    fileName: 'name',
-    systemName: 'systemName',
-    additionalData: {},
-    actionType: "Edit", /*Value can be "Edit" or "View"*/
-    AutoOpenEditorType: 'WOPI/Desktop', /*OPTIONAL*/
-    ShowUIActions: ["WOPI", "Desktop"] /*OPTIONAL*/,
-};
-const editSessionUrlResponse = {
-    eventType: 'omnidocs-session-url-response',
-    editUrl: 'URL-for-co-editing',
-    correlationId: 'correlationId'
-}
-const deliverRequest = {
-    eventType: 'omnidocs-deliver-request',
-    downloadUrl: 'download-url',
-    correlationId: 'correlationId'
-}
-const closeRequest = {
-    eventType: 'omnidocs-close-request',
-    correlationId: 'correlationId'
-};
-const discardEvent = {
-    eventType: 'omnidocs-discard-event',
-    correlationId: 'correlationId'
-}
+classDiagram
+    class UploadRequest {
+        +String eventType = "omnidocs-upload-request"
+    }
+
+    class UploadResponse {
+        +String eventType = "omnidocs-upload-response"
+        +String fileBase64
+        +String fileName
+        +String systemName
+        +Map additionalData
+        +AutoOpenType AutoOpenEditorType = WOPI
+        +List<AutoOpenType> ShowUIActions
+        +String correlationId
+    }
+
+    class AutoOpenType {
+        <<enumeration>>
+        WOPI
+        OnPrem
+    }
+
+    class EditSessionUrlResponse {
+        +String eventType = "omnidocs-session-url-response"
+        +String editUrl
+        +String correlationId
+    }
+
+    class DeliverResponse {
+        +String eventType = "omnidocs-deliver-response"
+        +String data
+        +String correlationId
+    }
+
+    class CloseRequest {
+        +String eventType = "omnidocs-close-request"
+        +String correlationId
+    }
+
+    class DiscardEvent {
+        +String eventType = "omnidocs-discard-event"
+        +String correlationId
+    }
+
+    UploadRequest --> UploadResponse : Required response
+    UploadResponse --> EditSessionUrlResponse : Required response for online editing
+    DeliverResponse --> CloseRequest : Required response
+    DiscardEvent --> CloseRequest : Required response
+    UploadResponse ..> AutoOpenType : uses
+    UploadResponse ..> ShowUIActions : uses
+
 ```
 
 ## How to use the example application
@@ -186,8 +206,8 @@ All other users can co-edit and collaborate on the document.
 
 <b>Download URL one time usage</b> The download URL provided by EditFlow can only be used once.
 
-<b>Automating Editing Session Launch:</b>  (Optional parameter) You can automate both on-premise and online editing by setting AutoOpenEditorType to 'WOPI/Desktop' in the omnidocs-upload-response message parameter.
+<b>Automating Editing Session Launch:</b>  (Optional parameter) You can automate both on-premise and online editing by setting AutoOpenEditorType to 'WOPI/OnPrem' in the omnidocs-upload-response message parameter.
 
-<b>Enabling UI Action buttons</b>  (Optional parameter) You can control the available editing options for end-users by setting ShowUIActions to 'WOPI/Desktop' in the omnidocs-upload-response message parameter.
+<b>Enabling UI Action buttons</b>  (Optional parameter) You can control the available editing options for end-users by setting ShowUIActions to 'WOPI/OnPrem' in the omnidocs-upload-response message parameter.
 
 <b>Correlation ID and Co-Edit Session Cleanup</b> It is recommended to keep track of correlationId received in the editSessionUrlResponse. This allows tracking of which files no longer have an ongoing edit session. Additionally, it is the responsibility of the third-party implementers to clean up the saved co-edit session URL when correlating requests are sent, such as discard and save requests.
