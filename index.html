@@ -29,9 +29,33 @@
     <p id="upload-form"></p>
 
     <form id="uploadForm">
+        <label for="action-type-input">View only mode</label>
+        <input type="checkbox" id="action-type-input"  />
+        <br/>
+        <br />
+
+        <label>
+            <input type="radio" name="autoOpen" value="" checked>
+            Auto open disabled
+          </label>
+          <br>
+        <label>
+            <input type="radio" name="autoOpen" value="Wopi">
+            Auto open Wopi
+          </label>
+          <br>
+          <label>
+            <input type="radio" name="autoOpen" value="OnPrem">
+            Auto open OnPrem (WebDav)
+          </label>
+        
+    
+
+        <br />
+        <br />
         <label for="fileInput">Upload Office Document:</label>
         <input type="file" id="file-input" accept=".docx, .pptx, .xlsx" />
-
+        
         <button id="edit-button" type="button">Open Omnidocs Edit</button>
     </form>
 

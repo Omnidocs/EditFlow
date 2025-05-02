@@ -1,25 +1,25 @@
 const uploadRequest = {
-    eventType: 'omnidocs-edit-upload-request',
+    eventType: 'omnidocs-upload-request',
     editUrl: 'URL-for-co-editing'
 };
 
 const uploadResponse = {
-    eventType: 'omnidocs-edit-upload-response',
+    eventType: 'omnidocs-upload-response',
     fileBase64: 'base64FileString',
     fileName: 'name'
 };
 
 const deliverResponse = {
-    eventType: 'omnidocs-edit-deliver-response',
-    downloadUrl: 'download-url'
+    eventType: 'omnidocs-deliver-request',
+    data: 'download-url'
 }
 
 const closeRequest = {
-    eventType: 'omnidocs-edit-close-request'
+    eventType: 'omnidocs-close-request'
 };
 
 const coEditingResponse = {
-    eventType: 'omnidocs-edit-session-url-response',
+    eventType: 'omnidocs-session-url-response',
     editUrl: ""
 };
 
@@ -118,7 +118,7 @@ const omnidocsEditFlowPostMessageModule = (function () {
                 if (messageData.eventType === deliverResponse.eventType){
                     console.log("received download link");
                     var downloadUrlField = document.getElementById("download-link");
-                    downloadUrlField.value = messageData.downloadUrl;
+                    downloadUrlField.value = messageData.data;
                 }
 
                 if (messageData.eventType === closeRequest.eventType) {
@@ -154,7 +154,24 @@ const omnidocsEditFlowPostMessageModule = (function () {
     function makeUploadResponse(base64File, file) {
         uploadResponse.fileBase64 = base64File;
         uploadResponse.fileName = file.name;
-        uploadResponse.actionType = 'Edit';
+        uploadResponse.systemName = "DemoApp";
+        
+        let viewOnlyChecked = document.getElementById("action-type-input").checked;
+
+        uploadResponse.actionType = viewOnlyChecked ? 'View' : "Edit";
+
+        let autoOpenValue = null;
+
+        const autoOpenRadioButtons = document.getElementsByName('autoOpen');
+
+        for (const radioButton of autoOpenRadioButtons) {
+            if (radioButton.checked && radioButton.value) {
+                autoOpenValue = radioButton.value;
+                break;
+            }
+        }
+
+        uploadResponse.autoOpenEditorType = autoOpenValue;
 
         let additionalData = document.getElementById("edit-data").value;
         try {

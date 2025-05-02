@@ -28,11 +28,12 @@ The integration communicates with the Edit Flow application via the PostMessage 
 1. <b>User Action</b>: The user initiates the process by clicking the "Edit Document" button in the third-party system.
 2. <b>Popup Initiation</b>: The third-party system opens a popup for the Edit Flow.
 3. <b>Authentication</b>: The user is presented with an authentication dialog based on the Create Tenant configuration.
-4. <b>Successful Authentication</b>: Once authenticated, an `omnidocs-edit-upload-request message` is sent to the third-party system. The third party must respond with an `omnidocs-edit-upload-response` message containing:
+4. <b>Successful Authentication</b>: Once authenticated, an `omnidocs-upload-request message` is sent to the third-party system. The third party must respond with an `omnidocs-upload-response` message containing:
     * The file for editing (Base64 encoded)
     * The file name
     * The source system parameter
     * Additional metadata to be displayed to the user
+    * ActionType ("Edit" or "View"), which defines if the session is view only or edit mode. If view only, then the document is presented in Microsoft 365 for the web instantly, without edit options available. 
     * The AutoOpenEditorType parameter, which defines whether the editing session should start automatically (values: 'WOPI/Desktop'). This is optional; if not provided, the editing session will not open automatically.
     * The ShowUIActions parameter, which specifies the available editing actions for the end-user (values: ["WOPI", "Desktop"]). This is optional; if not provided, all editing actions will be available.
 5. <b>Redirection to File Metadata Overview</b>: The first application popup displays the document's metadata and presents four user button actions:
@@ -40,16 +41,16 @@ The integration communicates with the Edit Flow application via the PostMessage 
     * `Edit in {ApplicationType} for the desktop` - Opens an MS Office application for editing. 
     * `Save back to {SourceSystem}` – Saves the current state of the uploaded document.
     * `Discard` – Discards any changes made to the uploaded document.
-6. <b>Opening the Editing Popup</b>: When the `Edit using Microsoft 365 for the web` button is clicked, a second popup opens for document editing. At this stage, Edit Flow responds with the `omnidocs-edit-session-url-response` containing a co-editing URL, allowing the third-party system to store it for additional users to join the session.
+6. <b>Opening the Editing Popup</b>: When the `Edit using Microsoft 365 for the web` button is clicked, a second popup opens for document editing. At this stage, Edit Flow responds with the `omnidocs-session-url-response` containing a co-editing URL, allowing the third-party system to store it for additional users to join the session.
 7. <b>Another User Joins the Editing Session to Co-Edit:</b>: The user clicks the co-editing URL in the third-party system. The editing popup opens immediately. Only the first user can make decisions regarding the file state; all other users can collaborate only.
 8. <b>Opening the File via WebDAV:</b> When `Edit in {ApplicationType} for the desktop` button is pressed, the designated MS Office application opens for editing. 
-    * Since WebDAV does not support co-editing, the `omnidocs-edit-session-url-response` will not be sent to the third-party system.
+    * Since WebDAV does not support co-editing, the `omnidocs-session-url-response` will not be sent to the third-party system.
 9. <b>Completing the Editing Session</b>: Once editing is complete, the user must take action in the file metadata overview popup:
-    *  `Save back to {SourceSystem}` Clicked. The `omnidocs-edit-deliver-response` message is sent to the third party, containing the download URL with the latest edited file version.
+    *  `Save back to {SourceSystem}` Clicked. The `omnidocs-deliver-request` message is sent to the third party, containing the download URL with the latest edited file version.
         At this stage, the 3rd Party can close the popup. 
-    * `Discard` Clicked. The `omnidocs-edit-discard-request` message is sent, instructing the third party to close the popup without saving changes.
-    * After performing either of the actions above, the `omnidocs-edit-close-request` is sent to the third party, indicating that the popup can be closed.
-10. <b> User closes the file metadata overview popup</b>: Edit Flow displays an alert asking if the session should be terminated. If the user clicks OK, the `omnidocs-edit-discard-request` is sent to the third-party system, notifying it to close the popup.
+    * `Discard` Clicked. The `omnidocs-discard-request` message is sent, instructing the third party to close the popup without saving changes.
+    * After performing either of the actions above, the `omnidocs-close-request` is sent to the third party, indicating that the popup can be closed.
+10. <b> User closes the file metadata overview popup</b>: Edit Flow displays an alert asking if the session should be terminated. If the user clicks OK, the `omnidocs-discard-request` is sent to the third-party system, notifying it to close the popup.
 
 ### Sequence Diagram
 ```mermaid
@@ -65,14 +66,14 @@ sequenceDiagram
     
     EditFlow ->> Creat: Redirect to authenticate
     Creat -->> EditFlow: Successful authentication
-    EditFlow ->> 3rdParty: Send `omnidocs-edit-upload-request` message
+    EditFlow ->> 3rdParty: Send `omnidocs-upload-request` message
     
     alt First user
-        3rdParty ->> EditFlow: Send `omnidocs-edit-upload-response` message
+        3rdParty ->> EditFlow: Send `omnidocs-upload-response` message
         EditFlow -->> User: Redirect to File metadata view
         User -->> EditFlow: User selects the editing mode (Online/On-premise)
             alt Online Editing mode selected
-                EditFlow ->> 3rdParty: Send `omnidocs-edit-session-url-response` message
+                EditFlow ->> 3rdParty: Send `omnidocs-session-url-response` message
                 opt 3rdParty supports co-edting
                     3rdParty ->> 3rdParty: [store edit url for 24h]
                 end
@@ -91,24 +92,24 @@ sequenceDiagram
     User ->> User: [working on file]
     alt User is saving back
         User ->> EditFlow: User clicks `Save to {systemName}` button (File metadata view)
-        EditFlow ->> 3rdParty: Send `omnidocs-edit-deliver-response` message 
+        EditFlow ->> 3rdParty: Send `omnidocs-deliver-request` message 
 
         3rdParty ->> 3rdParty: [store or download]
         opt 3rdParty supports co-editing
             3rdParty ->> 3rdParty: [delete edit url]
         end
 
-        EditFlow ->> 3rdParty: Send `omnidocs-edit-close-request` message 
+        EditFlow ->> 3rdParty: Send `omnidocs-close-request` message 
         3rdParty ->> User: Close EditFlow popup
     end
     alt User is discarding the editing session
         User ->> EditFlow: Discard editing
-        EditFlow ->> 3rdParty: Send `omnidocs-edit-discard-request` message
+        EditFlow ->> 3rdParty: Send `omnidocs-discard-request` message
         opt 3rdParty supports co-editing
             3rdParty ->> 3rdParty: [delete edit url]
         end
 
-        EditFlow ->> 3rdParty: Send `omnidocs-edit-close-request` message 
+        EditFlow ->> 3rdParty: Send `omnidocs-close-request` message 
         3rdParty ->> User: Close EditFlow popup
     end
     
@@ -119,58 +120,37 @@ sequenceDiagram
 
 ### Class diagrams
 ```mermaid
-classDiagram
-    class UploadRequest {
-        +String eventType = "omnidocs-edit-upload-request"
-        +String correlationId
-    }
-
-    class UploadResponse {
-        +String eventType = "omnidocs-edit-upload-response"
-        +String fileBase64
-        +String fileName
-        +String systemName
-        +Map additionalData
-        +AutoOpenType AutoOpenEditorType = WOPI
-        +List<AutoOpenType> ShowUIActions
-        +String correlationId
-    }
-
-    class AutoOpenType {
-        <<enumeration>>
-        WOPI
-        Desktop
-    }
-
-    class EditSessionUrlResponse {
-        +String eventType = "omnidocs-edit-session-url-response"
-        +String editUrl
-        +String correlationId
-    }
-
-    class DeliverResponse {
-        +String eventType = "omnidocs-edit-deliver-response"
-        +String downloadUrl
-        +String correlationId
-    }
-
-    class CloseRequest {
-        +String eventType = "omnidocs-edit-close-request"
-        +String correlationId
-    }
-
-    class DiscardEvent {
-        +String eventType = "omnidocs-edit-discard-event"
-        +String correlationId
-    }
-
-    UploadRequest --> UploadResponse : Required response
-    UploadResponse --> EditSessionUrlResponse : Required response for online editing
-    DeliverResponse --> CloseRequest : Required response
-    DiscardEvent --> CloseRequest : Required response
-    UploadResponse ..> AutoOpenType : uses
-    UploadResponse ..> ShowUIActions : uses
-
+const uploadRequest = {
+    eventType: 'omnidocs-upload-request'
+};
+const uploadResponse = {
+    eventType: 'omnidocs-upload-response',
+    fileBase64: 'base64FileString',
+    fileName: 'name',
+    systemName: 'systemName',
+    additionalData: {},
+    actionType: "Edit", /*Value can be "Edit" or "View"*/
+    AutoOpenEditorType: 'WOPI/Desktop', /*OPTIONAL*/
+    ShowUIActions: ["WOPI", "Desktop"] /*OPTIONAL*/,
+};
+const editSessionUrlResponse = {
+    eventType: 'omnidocs-session-url-response',
+    editUrl: 'URL-for-co-editing',
+    correlationId: 'correlationId'
+}
+const deliverRequest = {
+    eventType: 'omnidocs-deliver-request',
+    downloadUrl: 'download-url',
+    correlationId: 'correlationId'
+}
+const closeRequest = {
+    eventType: 'omnidocs-close-request',
+    correlationId: 'correlationId'
+};
+const discardEvent = {
+    eventType: 'omnidocs-discard-event',
+    correlationId: 'correlationId'
+}
 ```
 
 ## How to use the example application
@@ -206,8 +186,8 @@ All other users can co-edit and collaborate on the document.
 
 <b>Download URL one time usage</b> The download URL provided by EditFlow can only be used once.
 
-<b>Automating Editing Session Launch:</b>  (Optional parameter) You can automate both on-premise and online editing by setting AutoOpenEditorType to 'WOPI/Desktop' in the omnidocs-edit-upload-response message parameter.
+<b>Automating Editing Session Launch:</b>  (Optional parameter) You can automate both on-premise and online editing by setting AutoOpenEditorType to 'WOPI/Desktop' in the omnidocs-upload-response message parameter.
 
-<b>Enabling UI Action buttons</b>  (Optional parameter) You can control the available editing options for end-users by setting ShowUIActions to 'WOPI/Desktop' in the omnidocs-edit-upload-response message parameter.
+<b>Enabling UI Action buttons</b>  (Optional parameter) You can control the available editing options for end-users by setting ShowUIActions to 'WOPI/Desktop' in the omnidocs-upload-response message parameter.
 
-<b>Correlation ID and Co-Edit Session Cleanup</b> It is recommended to include a correlationId in the requests, which can be saved as a tag or metadata entry on the files. This allows tracking of which files no longer have an ongoing edit session. Additionally, it is the responsibility of the third-party implementers to clean up the saved co-edit session URL when correlating requests are sent, such as discard and save requests.
+<b>Correlation ID and Co-Edit Session Cleanup</b> It is recommended to keep track of correlationId received in the editSessionUrlResponse. This allows tracking of which files no longer have an ongoing edit session. Additionally, it is the responsibility of the third-party implementers to clean up the saved co-edit session URL when correlating requests are sent, such as discard and save requests.
