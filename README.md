@@ -181,7 +181,7 @@ classDiagram
 npm i && npm start 
 ```
 4. Open your browser and go to http://localhost:8080.
-5. Enter the Edit URL in the format https://wopi.synapseomnidocs.com/details?authDomain={omnidocsDomain}, replacing {omnidocsDomain} with the authentication domain obtained in Step 1.
+5. Enter the Edit URL in the format https://wopi.edit.omnidocs.cloud/details?authDomain={omnidocsDomain}, replacing {omnidocsDomain} with the authentication domain obtained in Step 1.
 6. Fill out the additional metadata in JSON format to include for the UI. (Optional)
 7. Click the Choose the file for editing button and select the file you want to edit.
 8. Click the Open Omnidocs EditFlow button to begin editing.
