@@ -9,7 +9,7 @@ const uploadResponse = {
     fileName: 'name'
 };
 
-const deliverResponse = {
+const deliverRequest = {
     eventType: 'omnidocs-deliver-request',
     data: 'download-url'
 }
@@ -115,7 +115,7 @@ const omnidocsEditFlowPostMessageModule = (function () {
                     resolveEditUrl = messageData.editUrl;
                 }
 
-                if (messageData.eventType === deliverResponse.eventType){
+                if (messageData.eventType === deliverRequest.eventType){
                     console.log("received download link");
                     var downloadUrlField = document.getElementById("download-link");
                     downloadUrlField.value = messageData.data;
@@ -156,9 +156,14 @@ const omnidocsEditFlowPostMessageModule = (function () {
         uploadResponse.fileName = file.name;
         uploadResponse.systemName = "DemoApp";
         
-        let viewOnlyChecked = document.getElementById("action-type-input").checked;
-
+        const viewOnlyChecked = document.getElementById("action-type-input").checked;
         uploadResponse.actionType = viewOnlyChecked ? 'View' : "Edit";
+        
+        const autoSaveOnExit = document.getElementById("auto-save-exit").checked;
+        uploadResponse.autoSaveOnExit = autoSaveOnExit;
+
+        const disableSaveWhileEditing = document.getElementById("disable-save-while-editing").checked;
+        uploadResponse.disableSaveWhileEditing = disableSaveWhileEditing;
 
         let autoOpenValue = null;
 

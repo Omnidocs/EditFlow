@@ -1,91 +1,110 @@
-# Omnidocs Edit Flow
-The Edit Flow is a client-side integration utilizing the PostMessage API, designed to facilitate document editing within a popup-based workflow. It enables seamless communication between the third-party frontend and the Edit Flow frontend, supporting:
-* Online editing via the WOPI protocol
-* On-premise editing via the WebDAV protocol
+# Omnidocs EditFlow
+The EditFlow Connector is a client-side integration utilizing the PostMessage API, designed to facilitate document editing within a popup-based workflow, enabling seamless communication with the EditFlow frontend.
 
-This flow includes authentication, file uploads to blob storage, and secure document editing, ensuring compliance with WOPI and WebDAV standards.
+The full flow includes authentication, file uploading to the specified storage provider, and secure document editing - supporting online editing via the WOPI protocol and desktop (on-premise) editing via the WebDAV protocol, fully compliant with their respective standards.
 
-## Workflow & UI Behavior
-To adhere to WOPI UI guidelines, the flow involves two popups:
+## Workflow and UI Behavior
+Due to protocol restrictions and strict UI guidelines, the flow involves two windows.
 
-1. First Popup: Displays an overview of the document and presents decision buttons for editing options.
-2. Second Popup (WOPI Editing Only): Opens a WOPI iFrame for online document editing.
+### File Overview Window
+Displays an overview of the document and presents decision buttons for editing options.
 
-When editing via on-premise applications (using WebDAV) the related Office application is launched directly for editing.
+### Editing Window
+Depending on the mode of editing, the second window will be either 1. a new popup window containing a WOPI iFrame (online editing), or, 2. the respective Office application, launched directly on the desktop (desktop editing). <br/> 
+Note that co-editing is not available when editing on the desktop.
 
 ## Prerequisites
-1.	Secure Hosting: The Edit Flow must be hosted on HTTPS to ensure secure communication.
-2.	Third-Party Application Compatibility:
-    * Must support custom components and JavaScript.
-    * Must be capable of opening popups and using the PostMessage API.
-3.  Authentication & Tenancy: 
-    * An Omnidocs Create Tenancy with authentication configured is required.
-    * The AuthDomain (subdomain) parameter is necessary to initiate the first Edit Flow popup and can be retrieved from the Omnidocs Create Tenant.
-4.  Co-Editing Support (Optional): If co-editing is to be supported, the third-party application must have the capability to store the co-editing URL for an online editing session.
 
-## How it works?
-The integration communicates with the Edit Flow application via the PostMessage API. The messages exchanged and the user flow are described in the following steps:
-1. <b>User Action</b>: The user initiates the process by clicking the "Edit Document" button in the third-party system.
-2. <b>Popup Initiation</b>: The third-party system opens a popup for the Edit Flow.
-3. <b>Authentication</b>: The user is presented with an authentication dialog based on the Create Tenant configuration.
-4. <b>Successful Authentication</b>: Once authenticated, an `omnidocs-upload-request message` is sent to the third-party system. The third party must respond with an `omnidocs-upload-response` message containing:
-    * The file for editing (Base64 encoded)
-    * The file name
-    * The source system parameter
-    * Additional metadata to be displayed to the user
-    * ActionType ("Edit" or "View"), which defines if the session is view only or edit mode. If view only, then the document is presented in Microsoft 365 for the web instantly, without edit options available. 
-    * The AutoOpenEditorType parameter, which defines whether the editing session should start automatically (values: 'WOPI/OnPrem'). This is optional; if not provided, the editing session will not open automatically.
-    * The ShowUIActions parameter, which specifies the available editing actions for the end-user (values: ["WOPI", "OnPrem"]). This is optional; if not provided, all editing actions will be available.
-5. <b>Redirection to File Metadata Overview</b>: The first application popup displays the document's metadata and presents four user button actions:
-    * `Edit using Microsoft 365 for the web` – Opens a second popup with the WOPI frame for editing.
-    * `Edit in {ApplicationType} for the desktop` - Opens an MS Office application for editing. 
-    * `Save back to {SourceSystem}` – Saves the current state of the uploaded document.
-    * `Discard` – Discards any changes made to the uploaded document.
-6. <b>Opening the Editing Popup</b>: When the `Edit using Microsoft 365 for the web` button is clicked, a second popup opens for document editing. At this stage, Edit Flow responds with the `omnidocs-session-url-response` containing a co-editing URL, allowing the third-party system to store it for additional users to join the session.
-7. <b>Another User Joins the Editing Session to Co-Edit:</b>: The user clicks the co-editing URL in the third-party system. The editing popup opens immediately. Only the first user can make decisions regarding the file state; all other users can collaborate only.
-8. <b>Opening the File via WebDAV:</b> When `Edit in {ApplicationType} for the desktop` button is pressed, the designated MS Office application opens for editing. 
-    * Since WebDAV does not support co-editing, the `omnidocs-session-url-response` will not be sent to the third-party system.
-9. <b>Completing the Editing Session</b>: Once editing is complete, the user must take action in the file metadata overview popup:
-    *  `Save back to {SourceSystem}` Clicked. The `omnidocs-deliver-request` message is sent to the third party, containing the download URL with the latest edited file version.
-        At this stage, the 3rd Party can close the popup. 
-    * `Discard` Clicked. The `omnidocs-discard-request` message is sent, instructing the third party to close the popup without saving changes.
-    * After performing either of the actions above, the `omnidocs-close-request` is sent to the third party, indicating that the popup can be closed.
-10. <b> User closes the file metadata overview popup</b>: Edit Flow displays an alert asking if the session should be terminated. If the user clicks OK, the `omnidocs-discard-request` is sent to the third-party system, notifying it to close the popup.
+### Third-Party Connector Application Compatibility
+Your third-party application must support custom components and JavaScript, and must be capable of opening popups as well as using the PostMessage API.
 
-### Sequence Diagram
+#### Co-Editing Support
+To support co-editing, the third-party application must be able to store the co-editing URL for an online editing session.
+
+### Authentication & Tenancy
+The EditFlow application requires an active Omnidocs Create Tenancy with authentication configured. When first opening and initiating communication with the EditFlow application, you must pass the required query parameter `?authDomain={YOUR_CREATE_TENANT}` and authenticate with Omnidocs Create.
+
+## How it works
+Your third-party system communicates with the EditFlow application via the PostMessage API. The messages exchanged and the user flow, as they appear in this example application, are described in the following steps:
+
+### Initialization 
+
+1. <b>User Action</b> <br/> The user initiates the process by clicking the "Edit Document" button in the third-party system.
+2. <b>Popup Initiation</b> <br/> The third-party system opens a popup for the EditFlow.
+3. <b>Authentication</b> <br/> The user is presented with an authentication dialog based on the Create Tenant configuration.
+4. <b>Successful Authentication</b> <br/> Once authenticated, an `omnidocs-upload-request message` is sent to the third-party system. 
+5. <b>File Upload</b> <br/> The third party responds with an `omnidocs-upload-response` message, described in detail in [Nota Bene - Session Configuration](#session-configuration).
+6. <b>Redirection to File Metadata Overview</b> <br/> After recieving a well-formed `uploadResponse`, the primary application window will respond with an `omnidocs-session-url-response`, which contains a url linking to the File Metadata Overview for the session, that can be used to join the session. 
+7. <b>File Metadata Overview</b> <br/> The primary EditFlow window will then display the document information and present the user with the following actions:
+* `Edit using Microsoft 365 for the web` – Opens a second browser window for editing, containing a WOPI iFrame.
+* `Edit in {ApplicationType} for the desktop` - Opens an MS Office application for editing. 
+* `Save back to {SourceSystem}` – Saves the current state of the uploaded document.
+* `Discard` – Discards any changes made to the uploaded document.
+
+The session is now ongoing, and the user guides the flow.
+
+### Active Session
+Based on the user's actions, you may need to receive and/or respond to messages from the EditFlow application. As the user selects a specific editing method, the other editing method will be disabled for the session.
+
+#### Online Editing
+When the `Edit using Microsoft 365 for the web` button is clicked, a second popup opens for document editing.
+
+##### Another User Joins the Editing Session to Co-Edit
+<b>Requires co-editing support.</b> Another user may join the online editing session by navigating to the co-editing URL generated above. After authentication, the user lands on the File Metadata Overview.
+
+#### Opening the File via WebDAV 
+When `Edit in {ApplicationType} for the desktop` button is pressed, the designated MS Office application opens for editing. <br/> Note that as the WebDAV protocol does not allow for co-editing, only one user is able to edit the file at a time, and any users sharing the session will be unable to collaborate.
+
+#### Completing the Editing Session
+The user can end the editing session from the primary window in the following ways:
+
+##### Saving the file
+The `omnidocs-deliver-request` message is sent to the third party, containing the download URL with the latest edited file version. Then, an `omnidocs-close-request` is sent to the third party, indicating that the session is terminated and the primary window can be closed.
+
+##### Discarding the session
+Firstly, the file is deleted from the server. Next, the `omnidocs-discard-request` message is sent, instructing the third party to close the popup without saving. An `omnidocs-close-request` is sent to the third party, indicating that the primary window can be closed.
+
+### Relevant Illustrations
+Below you may find a visualization of the flow and an overview of the message objects involved.
+
+#### Sequence Diagram
+Below is a sequence diagram detailing the flow between the user, the third-party system, the EditFlow application, and the Omnidocs Create application. <br/> 
+Note the alternative and optional flows, denoted `alt` and `opt`, respectively.
+
 ```mermaid
 sequenceDiagram
     participant User as User
-    participant 3rdParty as 3rd Party System
+    participant 3rdParty as 3rd Party System (EditFlow Connector)
     participant EditFlow as Omnidocs EditFlow
     participant Creat as Omnidocs Create
+    
     User ->> 3rdParty: Click `edit document` button
-
     3rdParty ->> EditFlow: Open EditFlow popup
-    
-    
     EditFlow ->> Creat: Redirect to authenticate
     Creat -->> EditFlow: Successful authentication
-    EditFlow ->> 3rdParty: Send `omnidocs-upload-request` message
+    EditFlow -->> User: Redirect to File metadata view
     
     alt First user
+        EditFlow ->> 3rdParty: Send `omnidocs-upload-request` message
         3rdParty ->> EditFlow: Send `omnidocs-upload-response` message
-        EditFlow -->> User: Redirect to File metadata view
-        User -->> EditFlow: User selects the editing mode (Online/On-premise)
-            alt Online Editing mode selected
-                EditFlow ->> 3rdParty: Send `omnidocs-session-url-response` message
+        EditFlow -->> EditFlow: Fetch Session Metadata (Continuous)
+        EditFlow ->> 3rdParty: Send `omnidocs-session-url-response` message
+        User -->> EditFlow: User selects the editing mode
+            alt Online Editing Mode
                 opt 3rdParty supports co-edting
                     3rdParty ->> 3rdParty: [store edit url for 24h]
                 end
                 EditFlow ->> EditFlow: Open File editing iframe popup
             end
-            alt On premise editing mode selected
+            alt On-premise Editing Mode
                 EditFlow ->> EditFlow: Open File in Office Application
             end
     end
+
     alt Second user, co-editor (Online editing only)
         User ->> 3rdParty: Click `co-edit document` button
         3rdParty ->> EditFlow: Open EditFlow popup
+        EditFlow -->> EditFlow: Fetch Session Metadata (Continuous)
         EditFlow -->> User: Redirect to File editing iframe
     end
 
@@ -118,96 +137,112 @@ sequenceDiagram
     end
 ```
 
-### Class diagrams
+#### Message Objects
+Detailed below are the message objects sent between windows via `window.postMessage()`. A message object must have the appropriate `eventType` for each step in the process. Note that while not all messages require a response via `window.postMessage()`, they may still require your application to take action.
+
 ```mermaid
 classDiagram
     class UploadRequest {
-        +String eventType = "omnidocs-upload-request"
+        eventType: String = 'omnidocs-upload-request'
     }
-
     class UploadResponse {
-        +String eventType = "omnidocs-upload-response"
-        +String fileBase64
-        +String fileName
-        +String systemName
-        +Map additionalData
-        +AutoOpenType AutoOpenEditorType = WOPI
-        +List<AutoOpenType> ShowUIActions
-        +String correlationId
-    }
-
-    class AutoOpenType {
-        <<enumeration>>
-        WOPI
-        OnPrem
+        eventType: String = 'omnidocs-upload-response'
+        actionType: ActionType
+        fileBase64: String
+        fileName: String
+        systemName: String
+        additionalData?: Object
+        autoSaveOnExit?: Boolean
+        autoOpenEditorType?: EditMode
+        disableSaveWhileEditing?: Boolean
+        showUIActions?: ActionType[]
     }
 
     class EditSessionUrlResponse {
-        +String eventType = "omnidocs-session-url-response"
-        +String editUrl
-        +String correlationId
+        eventType: String = 'omnidocs-session-url-response'
+        editUrl: String
+        correlationId: String
     }
-
-    class DeliverResponse {
-        +String eventType = "omnidocs-deliver-response"
-        +String data
-        +String correlationId
+    class DeliverRequest {
+        eventType: String = 'omnidocs-deliver-request'
+        downloadUrl: String
+        correlationId: String
     }
-
     class CloseRequest {
-        +String eventType = "omnidocs-close-request"
-        +String correlationId
+        eventType: String = 'omnidocs-close-request'
+        correlationId: String
     }
-
     class DiscardEvent {
-        +String eventType = "omnidocs-discard-event"
-        +String correlationId
+        eventType: String = 'omnidocs-discard-event'
+        correlationId: String
     }
 
+    class ActionType {
+        <<Enumeration>>
+        Edit
+        View
+    }
+    class EditMode {
+        <<Enumeration>>
+        Wopi
+        Desktop
+    }
+
+    %% Relationships
     UploadRequest --> UploadResponse : Required response
-    UploadResponse --> EditSessionUrlResponse : Required response for online editing
-    DeliverResponse --> CloseRequest : Required response
-    DiscardEvent --> CloseRequest : Required response
-    UploadResponse ..> AutoOpenType : uses
-    UploadResponse ..> ShowUIActions : uses
-
+    UploadResponse ..> ActionType : Uses
+    UploadResponse ..> EditMode : Uses
 ```
 
-## How to use the example application
-1. Obtain the authentication domain for EditFlow from Omnidocs Create tenant.
+## How to Use the Example Application
+To use this EditFlow Connector example application, do the following steps:
+
+1. Obtain the authentication domain for EditFlow from your Omnidocs Create tenant.
 2. Clone this repository to your local machine.
-3. Navigate to the folder containing the cloned repository and run:
+3. Navigate to the folder containing the cloned repository and run `npm i` to ensure the necessary packages are up-to-date, followed by the command `npm start` to start the web-application.
+4. Open your browser and go to `http://localhost:8080`.
+5. Using the authentication domain obtained above, enter the Edit URL in the format `https://wopi.edit.omnidocs.cloud/details?authDomain={authenticationDomain}` .
+6. Optionally, select your desired configuration options or fill out the additional metadata in JSON format to include for the UI.
+7. Click the "Choose File" button and select the Office file you want to edit.
+8. Click the "Open Omnidocs Edit" button to begin the session.
+9. In the session popup, choose your editing method. `Online` or `Desktop`.
+10. Make the necessary changes to the document within the editing session.
+11. If the document needs to be co-edited, copy the co-editing link from the "co-edit link" field. (Online editing only.)
+12. Once editing is complete, either `Save` or `Discard` your changes. When choosing `Save`, the edited file will be available (including changes made during the session) through the single-use download link.
+
+## Nota Bene
+
+### General 
+<b>Correlation ID and Co-edit Session Cleanup:</b> <br/> We recommend keeping track of the `correlationId` received in the `editSessionUrlResponse`. This allows tracking of which files no longer have an ongoing edit session. Additionally, it is the responsibility of the third-party system to keep track of and clean up the saved co-edit session URLs when correlating sessions are terminated and the third-party system is notified.
+
+<b>Editing Restrictions:</b> <br/> Each editing session can only use one editing mode. Once a document is opened on-premise, it cannot be edited online, and vice-versa.
+
+<b>Editing Session Duration:</b> <br/> Sessions can last up to 24 hours. After this period, the file will be removed from blob storage. A notification will inform users about this during the workflow.
+
+<b>Network & Security:</b> <br/> No firewall ports need to be opened for server-side communication.
+
+<b>Single-use Download URL:</b> <br/> The download URL provided by EditFlow can only be used once; the file is deleted from the server after download.
+
+<b>WOPI iFrame Editing & Auto-save:</b> <br/> Auto-save is enabled for the Office Online window, which may cause delays in saving changes back to EditFlow when editing online. This is a native behavior of the WOPI Auto Save function. To ensure the latest version of the file is saved, users should press Ctrl + S in the iFrame before clicking Save back to {SourceSystem}. This will trigger the native WOPI Save functionality.
+
+### Session Configuration
+To configure the editing session, use the optional properties in the `omnidocs-upload-response` message object. Since this message is only received once in flow, the session configuration may not be changed once the session has started - this is on purpose.
+
+```javascript
+const uploadResponse = {
+    eventType: 'omnidocs-upload-response',
+    actionType: 'edit' | 'view',    // Defines the session mode. For view-only, the document is immediately presented in Microsoft 365 for the web - without edit options.
+    fileBase64: 'base64FileString', // The file itself as a base64 string.
+    fileName: 'filename.docx',      // The name of the file.
+    systemName: 'systemName',       // The name of the file source system. Displayed on the Save button.
+
+    /* The following properties are optional and can be omitted. */
+    additionalData: {},                     // Additional data to be displayed to the user, this has no bearing on functionality.
+    autoSaveOnExit: false,                  // When enabled, the system will automatically save the edited file when the Primary User is done editing.
+    autoOpenEditorType: 'wopi' | 'desktop', // When enabled, the chosen editing type will be opened immediately as the user lands on the details page.
+    disableSaveWhileEditing: false,         // When enabled, the Save button will be disabled while the Primary User is editing.
+    showUIActions: ['wopi', 'desktop']      // Specifies the available editing actions for the end-user. If omitted, all editing actions will be available.
+};
+
+// Note that the "Primary User" or "File Owner" is the user who initiated the flow, identified by their email address when authenticating to our system.
 ```
-npm i && npm start 
-```
-4. Open your browser and go to http://localhost:8080.
-5. Enter the Edit URL in the format https://wopi.edit.omnidocs.cloud/details?authDomain={omnidocsDomain}, replacing {omnidocsDomain} with the authentication domain obtained in Step 1.
-6. Fill out the additional metadata in JSON format to include for the UI. (Optional)
-7. Click the Choose the file for editing button and select the file you want to edit.
-8. Click the Open Omnidocs EditFlow button to begin editing.
-9. Make the necessary changes to the document within the editing session.
-10. If the document needs to be co-edited, copy the co-editing link from the Co-edit link field.
-11. Once editing is complete, the download link for the updated file will be available, including all changes made during the session.
-
-## Important notes:
-
-<b>WOPI iFrame Editing & Auto Save</b>: Auto Save is enabled, which may cause delays in saving changes back to Edit Flow. This is a native behavior of the WOPI Auto Save function.
-To ensure the latest version of the file is saved, users should press Ctrl + S in the iFrame before clicking Save back to {SourceSystem}. This will trigger the native WOPI Save functionality.
-
-<b>Editing Session Duration</b>: Sessions can last up to 24 hours. After this period, the file will be removed from blob storage.
-A notification will inform users about this during the workflow.
-
-<b>Network & Security:</b> No firewall ports need to be opened for server-side communication.
-
-<b>Editing Restrictions:</b> Once a document is opened on-premise, it cannot be edited online.
-
-<b>User Roles & Collaboration:</b> Only the first user can decide the file state.
-All other users can co-edit and collaborate on the document.
-
-<b>Download URL one time usage</b> The download URL provided by EditFlow can only be used once.
-
-<b>Automating Editing Session Launch:</b>  (Optional parameter) You can automate both on-premise and online editing by setting AutoOpenEditorType to 'WOPI/OnPrem' in the omnidocs-upload-response message parameter.
-
-<b>Enabling UI Action buttons</b>  (Optional parameter) You can control the available editing options for end-users by setting ShowUIActions to 'WOPI/OnPrem' in the omnidocs-upload-response message parameter.
-
-<b>Correlation ID and Co-Edit Session Cleanup</b> It is recommended to keep track of correlationId received in the editSessionUrlResponse. This allows tracking of which files no longer have an ongoing edit session. Additionally, it is the responsibility of the third-party implementers to clean up the saved co-edit session URL when correlating requests are sent, such as discard and save requests.
