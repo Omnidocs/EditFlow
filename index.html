@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
@@ -8,6 +8,22 @@
     <style>
         body {
             padding: 0 32px;
+        }
+
+        .uploadForm {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .row {
+            display: flex;
+            justify-content: left;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            padding: 1em;
         }
     </style>
 </head>
@@ -20,60 +36,76 @@
     <h2>Edit your document</h2>
 
     <div>
-        <label for="edit-url" className="label">edit url for initialization</label>
-        <input id="edit-url" className="input" type="text" size="50" value="https://localhost:7070/details?authDomain=omnidocs" />
+        <label for="edit-url" className="label">URL for initialization:</label>
+        <input id="edit-url" className="input" type="text" size="75" value="https://wopi.edit.omnidocs.cloud/details?authDomain={{YOUR_TENANT}}" />
     </div>
 
-    <textarea style="margin: 8px 0;" id="edit-data" rows="10" cols="100" placeholder='{ "Owner": "John Doe", "numbers": 1452341243 }'>{ "Owner": "John Doe", "numbers": 1452341243 }</textarea>
+    <textarea style="margin: 8px 0;" id="edit-data" rows="10" cols="100"
+              placeholder='{ "Owner": "John Doe", "numbers": 1452341243 }'>{ "Owner": "John Doe", "numbers": 1452341243 }</textarea>
 
     <p id="upload-form"></p>
 
     <form id="uploadForm">
-        <label for="action-type-input">View only mode</label>
-        <input type="checkbox" id="action-type-input"  />
-        <br/>
-        <br />
+        <div class="row">
+            <div class="column">
+                <label>
+                    <input type="radio" name="autoOpen" value="" checked>
+                    Auto-open disabled
+                </label>
+                
+                <label>
+                    <input type="radio" name="autoOpen" value="Wopi">
+                    Auto-open online (Wopi)
+                </label>
+                
+                <label>
+                    <input type="radio" name="autoOpen" value="OnPrem">
+                    Auto-open on-prem (WebDav)
+                </label>
+            </div>
 
-        <label>
-            <input type="radio" name="autoOpen" value="" checked>
-            Auto open disabled
-          </label>
-          <br>
-        <label>
-            <input type="radio" name="autoOpen" value="Wopi">
-            Auto open Wopi
-          </label>
-          <br>
-          <label>
-            <input type="radio" name="autoOpen" value="OnPrem">
-            Auto open OnPrem (WebDav)
-          </label>
-        
-    
+            <div class="column">
+                <div class="row">
+                    <input type="checkbox" id="action-type-input" />
+                    <label for="action-type-input">View-only Mode</label>
+                </div>
 
-        <br />
-        <br />
-        <label for="fileInput">Upload Office Document:</label>
+                <div class="row">
+                    <input type="checkbox" id="auto-save-exit" />
+                    <label for="auto-save-exit">Auto-save on Exit</label>
+                </div>
+
+                <div class="row">
+                    <input type="checkbox" id="disable-save-while-editing" />
+                    <label for="disable-save-while-editing">Disable Save Button While Editing</label>
+                </div>
+            </div>
+        </div>
+
+        <label for="file-input">Upload Office Document:</label>
         <input type="file" id="file-input" accept=".docx, .pptx, .xlsx" />
-        
+
         <button id="edit-button" type="button">Open Omnidocs Edit</button>
     </form>
 
-
     <p id="edit-result"></p>
-
     <form>
         <label for="co-edit-link" className="label">co edit link</label>
         <input id="co-edit-link" className="input" type="text" size="50" value="co-edit-link" />
     </form>
+
     <p id="download-link-field"></p>
     <form>
         <label for="download-link" className="label">download link</label>
         <input id="download-link" className="input" type="text" size="50" value="download link" />
     </form>
+
     <script src="editflow-connector.js"></script>
     <script>
-        document.getElementById('edit-button').addEventListener('click', establishConnection);
+        let editButton = document.getElementById('edit-button');
+
+        if(editButton != undefined)
+            editButton.addEventListener('click', establishConnection);
 
         async function establishConnection() {
             await omnidocsEditFlowPostMessageModule.initiateConnection();
